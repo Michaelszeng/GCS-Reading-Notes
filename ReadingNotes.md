@@ -1,10 +1,30 @@
-## [Approximating Robot Configuration Spaces with few Convex Sets using Clique Covers of Visibility Graphs](https://groups.csail.mit.edu/robotics-center/public_papers/Werner23.pdf) - 1/18/2024
+## (Clique Covers:) [Approximating Robot Configuration Spaces with few Convex Sets using Clique Covers of Visibility Graphs](https://groups.csail.mit.edu/robotics-center/public_papers/Werner23.pdf) - 1/18/2024
 ### Method
-- 
+- Goal: minimum cardinality (number of nodes) to maximize $\alpha$: fraction of collision-free config. space that is occupied by convex cover.
+- Goal approximation: minimum number of cliques to maximize $\alpha$.
+- *Visibility Graph*: undirected graph w/vertices and edges between all 2 vertices that can "see" each other.
+- *Clique Cover*: Collection of cliques where each vtx in graph is in a clique.
+- Algorithm:
+   - Repeat until $\alpha$ reaches coverage threshold:
+      - Sample points in $C^{free}$, construct visibility graph by checking collisions along line segments for each pair of sampled points.
+         - Note that the convex regions from earlier iterations of alg. are not part of $C^{free}$ (to encourage exploration).
+      - While true:
+         - MaxClique: NP-complete but fast in practice; finds max clique in graph.
+         - Removes clique from graph and adds to Clique Cover.
+         - If max clique is smaller than a threshold, break.
+      - MinVolumeEllipsoids: enclose each clique in ellipsoid (defined by center point and principal radii) of minimum volume; solved with SDP.
+      - Basically run an iteration of IRIS using these ellipsoids as seeds $q_0$ for each IRIS region.
+      - Check/estimiate $\alpha$ by sampling points in $C^{free}$, seeing what fraction fall in convex regions.
+
+
+### Limitations
+- Holes in $C^{free}$: if hole can be contained in clique, then convex regions may contain collisions. In practice, very rare.
+- Solution (but very slow): When building MaxClique, also include all points in the convex hull of the max clique to be part of the clique. (The math in the paper is confusing.)
+
 
 <br /><hr /><br />
 
-## (Deits1:) [Computing Large Convex Regions of Obstacle-Free Space through Semidefinite Programming](https://groups.csail.mit.edu/robotics-center/public_papers/Deits14.pdf)
+## (Deits14:) [Computing Large Convex Regions of Obstacle-Free Space through Semidefinite Programming](https://groups.csail.mit.edu/robotics-center/public_papers/Deits14.pdf)
 ### Summary:
 - Similar to IRIS-NP, but w/two more assumptions: 
    1) Obtacles are convex
