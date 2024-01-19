@@ -1,3 +1,19 @@
+## [Approximating Robot Configuration Spaces with few Convex Sets using Clique Covers of Visibility Graphs](https://groups.csail.mit.edu/robotics-center/public_papers/Werner23.pdf) - 1/18/2024
+### Method
+- 
+
+<br /><hr /><br />
+
+## (Deits1:) [Computing Large Convex Regions of Obstacle-Free Space through Semidefinite Programming](https://groups.csail.mit.edu/robotics-center/public_papers/Deits14.pdf)
+### Summary:
+- Similar to IRIS-NP, but w/two more assumptions: 
+   1) Obtacles are convex
+   2) Obstacles are known
+- This allows IRIS to do counter-example search without needing forward kinematics or NP, and just using a least-distance quadratic programming problem.
+- Basically, only feasible in task-space (i.e. for drones).
+
+<br /><hr /><br />
+
 ## (IRIS-NP:) [Growing Convex Collision-Free Regions in Configuration Space using Nonlinear Programming](https://arxiv.org/pdf/2303.14737.pdf) - 1/12/2024
 ### Method
 - Assumptions: known collision geometries (in task-space).
@@ -33,8 +49,7 @@ Note: works only with the introduction of new obstacles, not the removal of exis
 
 Keep original regions. When new obstacle is introduced, start with some seed (can be either the already-generated ellipsoid for a nearby region or a new hypersphere at a new nearby $q_0$); perform just one round (i.e. only 1 iteration of the outer `while` loop in the graphic above) of adding hyperplanes, considering only collision pairs between the new obstacle and all other collision bodies.
 
-
-<br /><br />
+<br /><hr /><br />
 
 ## [Motion Planning around Obstacles with Convex Optimization](https://arxiv.org/pdf/2205.04422.pdf) - 1/12/2024
 ### Background
