@@ -1,3 +1,14 @@
+## (GCS:) [SHORTEST PATHS IN GRAPHS OF CONVEX SETS](https://arxiv.org/pdf/2101.11565) - 6/18/2024
+### Problem Defn.
+- $G := (V, \epsilon)$
+- $v \in V$
+- $X_v \subset \mathbb{R}^n$ - convex set for vertex $v$
+- $x_v$ - point within $X_v$
+- $e = (u,v) \in \epsilon$
+
+
+<br /><hr /><br />
+
 ## (Clique Covers:) [Approximating Robot Configuration Spaces with few Convex Sets using Clique Covers of Visibility Graphs](https://groups.csail.mit.edu/robotics-center/public_papers/Werner23.pdf) - 1/18/2024
 ### Method
 - Goal: minimum cardinality (number of nodes) to maximize $\alpha$: fraction of collision-free config. space that is occupied by convex cover.
@@ -40,7 +51,8 @@
 - Goal: generate convex polytope w/max volume inscribed ellipsoid
    - <sub><sup>Note: calculating volume of polytope itself is NP-hard → ellipsoid as a heuristic</sup></sub>.
 #### Generating 1 ellipsoid:
-- Ellipsoid expressed like so: $ \epsilon(C,d) = {x | (x-d)^T C^T C(x-d) \leq 1}) $.
+- Ellipsoid expressed like so: $ \epsilon(C,d) = {x | (x-d)^T C^T C(x-d) \leq 1} $.
+   - $d$ is the center of the ellipsoid; $C$ is a symmetric positive definite matrix; eigenvalues and eigenvectors represent scale and direction of principle axes of the ellipsoid. (Note: bc $C$ is symmetric, it can be diagonalized into $QVQ^T$ where $Q$ is an orthogonal matrix with columns being the eigenvectors of $C$).
 - Polytope expresed as collections of "halfplanes": $ P(A,b) = \{x|Ax \leq b\} $
 - Initialization: seed $q_0$; $P_0$ is initialized w/robot joint limits. $\epsilon_0$ initialized as tiny hyperphere.
 - Adding Separating Hyperplanes: Iterate over all pairs of collision bodies. For each pair of collision bodies, repeat until "counter-example search" repeatedly fails:
