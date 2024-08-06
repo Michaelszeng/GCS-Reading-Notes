@@ -6,6 +6,16 @@
 - $x_v$ - point within $X_v$
 - $e = (u,v) \in \epsilon$
 
+<br /><hr /><br />
+
+## Hit and Run Sampling: - 8/6/24
+- Goal: randomly sample from a convex set. Over a large number of samples, converges to a uniform distribution.
+- Is a Markov Chain--at each step, selecting the next sample only depends on current sample, not previous samples.
+- Start with initial sample $x_0$ in convex set $S$.
+- `for each iteration:`
+   - Select random unit-vector direction $d$. Sample uniformly from a multi-variate normal distribution and normalize the result.
+   - Define a line $L$ passing through $x_0$, and find the intersection of $L$ with the bounds of the $S$, $a$ and $b$. This involves finding the two values of $\lambda$ where $x_0 + \lambda d$ intersects with a hyperplane.
+   - Randomly sample a new $x_0$ from $L$ by sampling between the two values of $\lambda$. This new $x_0$ is your new sample.
 
 <br /><hr /><br />
 
