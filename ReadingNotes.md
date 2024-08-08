@@ -94,6 +94,7 @@
    - search for configurations within polytope resulting in collision ("counter-example search"). Add plane tangent to the ellipsoid at any collision point.
    - "counter-example search": Technically, solves (non-linear) optimization for nearest point to ellipsoid center that results in collision between two given collision bodies (performs forward kinematics to detect the collision in task-space $\rightarrow$ non-linearity). Can be geometrically understood as uniformly expanding ellipsoid until collision detected.
       - mathematical description: 
+
 $$
 \begin{aligned}
 & \text{minimize}_{q,t} && \|q - c\|^2_E \\
@@ -101,7 +102,7 @@ $$
 \end{aligned}
 $$
 
-<sub><sup>Finding closest configuration q in the current polytope P to center of current ellipse c such that there is a point t that is in both collision bodies A and B at q</sup></sub>
+<sub>Finding closest configuration q in the current polytope P to center of current ellipse c such that there is a point t that is in both collision bodies A and B at q.</sub>
    - if obstacles are convex in config. space (usually not the case unless you pre-decompose non-convex obstacles into convex parts), then tangent hyperplane guaranteed to separate collision from non-collision.
    - if obstacles non-convex in config. space, back the hyperplane away by user-defined margin $\delta$.
       - <img src="ReadingNotesSupplements/nonconvex_obstacles_backup.png" alt="" style="width:50%; margin-top: 10px"/>
