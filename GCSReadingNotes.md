@@ -1,3 +1,78 @@
+## (GCS (Tobia's Thesis, Ch. 5):) [Graphs of Convex Sets with Applications to  Optimal Control and Motion Planning](https://dspace.mit.edu/bitstream/handle/1721.1/156598/marcucci-tobiam-phd-eecs-2024-thesis.pdf?sequence=1&isAllowed=y) - 11/4/2024
+Background: general graph optimization problems
+
+<center><img src="ReadingNotesSupplements/GraphOptimizationFormulation.png" alt="" style="width:35%; margin-top: 10px"/></center><br />
+
+
+ - Variables are the subgraph $H$ (i.e. which edges/nodes); $\mathcal{H} = $ set of valid subgraphs (i.e. a path from $s$ to $t$, or a spanning tree, etc. depending on the problem being solved)
+
+GCS Formulation
+- Each node = cvx program
+- Each edge (v,w) = cvx cost and constraints, coupling programs v, w
+
+<center><img src="ReadingNotesSupplements/GCS_Formulation.png" alt="" style="width:75%; margin-top: 10px"/></center><br />
+
+
+- Two aspects of the problem:
+   - if $H$ is fixed, it's a simple cvx opt.
+   - if variables $x_v$ are fixed, it's a simple graph opt.
+   - A simple local solving idea could be to iterate between cvx opt. and graph opt.; but we will try to do better.
+
+GCS MINCP (Mixed Integer Non-Convex Program) Formulation
+
+<center><img src="ReadingNotesSupplements/GCS_MINCP_Formulation.png" alt="" style="width:75%; margin-top: 10px"/></center><br />
+
+
+- $\mathcal{y}= $ "incidence vector" -- set of binary variables describing whether to include each vertex/edge
+- $\mathcal{Y} \subseteq [0,1]^{\mathcal{V} \cup \mathcal{E}} = $ polytope of allowed subgraphs, constraining $\mathcal{y}$
+- Notice: cost + last 2 constraints are non-cvx (bilinearity btwn $x$ and $y$).
+   - The last 2 constraints apply if a corresponding node/edge are included in the solution ($\mathcal{y}$ value=1)
+   - Cost function only adds cost of nodes/edges that are included in the solution ($\mathcal{y}$ value=1)
+
+- We want to make the program cvx
+   - Define auxiliary variables $z := y x$ for each vtx/edge
+   - Define modified cost functions/constraint sets that operate on $z$
+      - $\tilde{\mathcal{X}}_v \in \mathbb{R}^{n+1} = \{(z_v, y_v)$ | $z_v = x_v y_v$ for some $x_v \in \mathcal{X}_v,$ appended with $y_v \}$
+      - $\tilde{\mathcal{X}}_e  \in \mathbb{R}^{2n+1} = \{(z_v^e, z_w^e, y_e)$ | $z_v^e = y_e x_v, z_w^e = y_e x_w$ for $(x_v, x_w) \in \mathcal{X}_e,$ appended with $y_e \}$
+
+      - These are called "Homogenezations" of the sets $\mathcal{X}_v, \mathcal{X}_e$; embed them into a higher dimension where scaling by $y_v$ or $y_e$ is linear operation
+
+<center><img src="ReadingNotesSupplements/GCS_MINCP_Formulation2.png" alt="" style="width:75%; margin-top: 10px"/></center><br />
+
+- Still non-cvx bc of bilinearity in last constraints defining $z$, but this form is easier to relax to a cvx program.
+
+GCS MICP Formulation
+ - Idea: add convex constraints that "envelop"/are tight with the bilinear constraints. Then relax the non-convex bilinear constraints by simply dropping them.
+ - The main challenge then is how to define these convex constraints that "envelop" the bilinear constraints.
+    - Assume the MINCP has some constraint in the forms ($\mathcal{I}_v = $ set of edges incident to vtx $v$):
+
+       $$ a y_v + \sum_{e \in \mathcal{I}_v} a_e y_e + b \geq 0 $$
+
+    - Then we can add this convex constraint:
+
+      $$ \bigg( a \mathcal{z}_v + \sum_{e \in \mathcal{I}_v} a_e \mathcal{z}_v^e,~ a y_v + \sum_{e \in \mathcal{I}_v} a_e y_e + b \bigg) \in \tilde{\mathcal{X}}_v $$
+
+    - If we add convex constraints like this for every constraint (except the nonconvex bilinear constraints) in the MINCP, we envelop the bilinear constraints and can drop them while maximizing tightness of this relaxation.
+
+ - Example: Say we have constraint: $0 \leq y_v \leq 1$. We can convert this to two convex constraints like so:
+   - $y_v \geq 0 \rightarrow (\mathcal{z}_v, y_v) \in \tilde{\mathcal{X}}_v \quad \forall v \in \mathcal{V}$
+       - Explanation: $a=1$, $a_e=0$, $b=0$  
+   - $1-y_e \geq 0 \rightarrow (\mathcal{x}_v - \mathcal{z}_v, 1 - y_v) \in \tilde{\mathcal{X}}_v \quad \forall v \in \mathcal{V}$
+       - Explanation: $a=-1$, $a_e=0$, $b=1$
+   - Notice how these new contraints envelop the bilinear constraint $\mathcal{z}_v = y_v \mathcal{x}_v$:
+       - if $y_v = 0$, then $z_v = 0$ in order for $(\mathcal{z}_v, y_v) \in \tilde{\mathcal{X}}_v$.
+       - if $y_v = 1$, then $z_v = x_v$ in order for $(\mathcal{z}_v, y_v) \in \tilde{\mathcal{X}}_v$.
+
+ - Specifically, for the classic GCS problem, adding such convex constraints based on $0 \leq y_v \leq 1$ and $0 \leq y_e \leq 1$ yields a correct/tight relaxation:
+
+<center><img src="ReadingNotesSupplements/GCS_MICP_Formulation.png" alt="" style="width:85%; margin-top: 10px"/></center><br />
+
+ - In general though, in the presence of other constraints in the GCS, this relaxation could be loose?
+
+
+
+<br /><hr /><br />
+
 ## (GCS:) [SHORTEST PATHS IN GRAPHS OF CONVEX SETS](https://arxiv.org/pdf/2101.11565) - 6/18/2024
 ### Problem Defn.
 - $G := (V, \epsilon)$
@@ -22,7 +97,7 @@
 - UnadaptiveTest($\delta, \varepsilon, \tau$) procedure: take $M$ samples from $\mathcal{P}$; *accept* if $\bar{X}_M \leq (1 - \tau) \epsilon$, else continue adding hyperplanes
 
 ### IRIS-ZO (Zero Order Optimization), aka Fast IRIS
-- Does not need to iterate through collision pairs. Instead, samples $M$ configurations from $\mathcal{P}$; uses collision-checker to check if in collision or not. If in collision, bisection/binary search used to find closest point to center of ellipse in collision. Tangent hyperplane is then drawn to this point.
+- Does not need to iterate through collision pairs. Instead, samples $M$ configurations from $\mathcal{P}$; uses collision-checker to check if in collision or not. If in collision, bisection/binary search used to find closest point to center of ellipse in collision. Tangent hyperplane (to the ellipse) is then drawn to this point.
 - Uses UnadaptiveTest($\delta, \varepsilon, \tau$) procedure (using the samples drawn in above bullet pt) to determine when enough hyperplanes have been added
 
 ### IRIS-NP2, aka Ray IRIS
