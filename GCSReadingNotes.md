@@ -1,4 +1,104 @@
-## (GCS (Tobia's Thesis, Ch. 5):) [Graphs of Convex Sets with Applications to  Optimal Control and Motion Planning](https://dspace.mit.edu/bitstream/handle/1721.1/156598/marcucci-tobiam-phd-eecs-2024-thesis.pdf?sequence=1&isAllowed=y) - 11/4/2024
+## (GCS*:) [GCS*: Forward Heuristic Search on Implicit Graphs of Convex Sets](https://arxiv.org/pdf/2407.08848)
+### Terminology
+- "implicit graph": not fully defined/stored in memory; instead defined via a source vertex and a successor operator that acts on a vertex and returns all outgoing edges.
+- in edge `(u,v)`, `v` is a "successor of `u`
+
+<center><img src="ReadingNotesSupplements/gcs_star_terminology.png" alt="" style="width:90%; margin-top: 10px"/></center><br />
+
+- NOTE: $\mathbf{v}$ refers to a "path", which is just a sequence of vertices regardless of exact points $x$ within each vertex
+- $f^*(v) = g^*(x) + h^*(x)$ denotes that $x$ is on the optimal path through $v$ 
+
+
+### Key problem and insight:
+- A* relies on OSPP (optimal sub-path property): all subpaths of an optimal path from $s$ to $t$ are also optimal. A* prunes a path when it sees that its cost-to-come is "dominated by" (i.e. greater than) the cost-to-come of another path between the same vertices.
+   - Note: A* (and similarly, Dijkstra's) don't explicitly do any pruning of suboptimal subpaths, but the pruning is inherent in the PQ and `visited` set: each time a vertex `v` is reached, a `(d, v)` entry is added to the PQ. Then, later, the `(d, v)` pair corresponding to the shortest path to `v` will be the first among all `(d,v)` pairs to be popped from the PQ and explored (because the PQ is ordered by $($`d`$+ \tilde{h}($`v`$))$; note that $\tilde{h}($`v`$)$ is the same regardless of the path to `v`), after which `v` will added to the `visited` set, preventing any longer paths to `v` from ever being explored.
+- OSPP doesn't hold for GCS -- shortest path from $s$ to $v$/$x_v \in \mathcal{X}_v$ goes to closest point in $\mathcal{X}_v$, but optimal path from $s$ to $t$ might select different point in $\mathcal{X}_v$
+- Optimal Sub-Trajectory property -- this does hold for GCS: for optimal traj from $s$ to $t$, any sub-trajectories (between 2 specific points) are optimal.
+   - One more condition required for this to be true: GCS allowed to revisit vertices (i.e. technically finds a shortest *walk* instead of shortest *path*). Why: the reason Optimal Sub-Traj. Prop. holds is because the optimal traj. to a pt. is idpt. of the optimal way to continue from that pt, only *if* the vertex that pt. belongs to can be visited again in the future.
+      - Note: in traditional graphs, it's never optimal to revisit vertices, but in GCS, you can have weird cost functions that do make it optimal.
+- Completeness property -- if we used A*'s pruning strategy, we might fail to find an solution when there is one; a shorter subpath from $s$ to $v$ might not lead to a feasible path to $t$, and would prune a longer, feasible path from $s$ to $v$.
+
+- Main idea:
+   1. GCS* doesn't prune a sub-path to $v$ so long as that path is cheaper to reach *any* point in $\mathcal{X}_v$ (retain optimality)
+   2. GCS* doesn't prunes a sub-path so long as it reaches a new, unreached point (retain completeness)
+
+### Domination Checks
+- a func. that determines whether a candidate path should be pruned or added to PQ
+- $\text{ReachesCheaper}$ -- optimal, complete
+   - Return True (i.e. don't prune) if there exists $x \in \mathcal{X}_{\mathbf{v}_{\text{end}}}$ such that candidate path $\mathbf{v}'$ is cheaper than any other known path to $x$:
+
+$$\text{ReachesCheaper}(\mathbf{v}', S[\mathbf{v}_{\text{end}}]) \; := \; \exists x \in \mathcal{X}_{\mathbf{v}_{\text{end}}} \\
+\text{s.t.} \quad \tilde{g}(\mathbf{v}', x) < \tilde{g}(\mathbf{v}, x), \quad \forall \mathbf{v} \in S[\mathbf{v}_{\text{end}}].$$
+   
+- $\text{ReachesNew}$ -- non-optimal, complete, faster than ReachesCheaper
+   - Return True (i.e. don't prune) if there exists $x \in \mathcal{X}_{\mathbf{v}_{\text{end}}}$ such that candidate path $\mathbf{v}'$ is the only known to $x$:
+
+$$\text{ReachesNew}(\mathbf{v}', S[\mathbf{v}_{\text{end}}]) \; := \; \exists x \in \mathcal{X}_{\mathbf{v}_{\text{end}}} \\
+\text{s.t.} \quad \tilde{g}(\mathbf{v}', x) < \infty \quad \text{AND} \quad (\tilde{g}(\mathbf{v}, x) = \infty \; \; \forall \mathbf{v} \in S[\mathbf{v}_{\text{end}}]).$$
+
+#### Implementation
+Sampling-based (probabilistically complete and optimal): sample $x \in \mathcal{X}_{\mathbf{v}_\text{end}}$; if it satisfies both $\text{ReachesCheaper}$ and $\text{ReachesNew}$, then do not prune.
+
+Set containment-based (complete and optimal): 
+- For a path $\mathbf{v}$: trajectories must reside in $\mathcal{P}_\mathbf{v}$
+- ...TODO
+
+### Algorithm
+- $S$: map from $v$ to set of paths to $v$
+   - note that A* effectively maintains map from vertex to single path (via `parent` dict.)
+- Select either $\text{ReachesNew}$ (for a faster check that guarantees completeness) or $\text{ReachesCheaper}$ (for optimal and complete) and call it $\text{NotDominated}$
+   - $\text{NotDominated}$ accepts 2 parameters: a new path to $v'$, and a list of existing paths to $v'$.
+
+
+
+<center><img src="ReadingNotesSupplements/gcs_star_alg.png" alt="" style="width:85%; margin-top: 10px"/></center><br />
+
+
+
+**Importantly**: the way the PQ is ordered is by: 
+
+$$\tilde{f}(\mathbf{v}) := \tilde{g}(\mathbf{v}, [\mathbf{x}^*(\mathbf{v})]_\text{end}) + \tilde{h}([\mathbf{x}^*(\mathbf{v})]_\text{end})$$
+
+$\tilde{f}(\mathbf{v})$ is the lowest possible estimated cost for any path from $s$ to $t$ going through subpath $\mathbf{v}$.
+
+In simple terms, $\tilde{f}(\mathbf{v})$ is the sum of cost-to-come of optimal trajectory $\mathbf{x}^*(\mathbf{v})$ through path $\mathbf{v}$ (ending at point $[\mathbf{x}^*(\mathbf{v})]_\text{end}$), and cost-to-go of optimal trajectory $\mathbf{x}^*(\mathbf{v})$ through path $\mathbf{v}$.
+
+$\tilde{f}(\mathbf{v})$ is computed exactly by solving the $\text{ConvexRestriction}$ of the GCS with $\mathbf{v}$ fixed, and with an added convex cost function $\tilde{h}$. 
+
+**Algorithm intuitive explanation:**
+1. Initialize path to $[s]$
+2. Pop current path $\mathbf{v}$ off PQ
+3. For each vertex $v'$ that's a successor to the last vertex in $\mathbf{v}$:
+
+   a. Build new path $\mathbf{v}'$ that appends $\mathbf{v} + v'$. If $\mathbf{v}'$ is $\text{NotDominated}$ by existing paths to $v'$ (which exist in $S[v']$), add it to PQ and save it in $S$
+
+
+### Algorithm Properties and Invariants
+If the heuristic is admissable: 
+- paths popped off the queue have monotonically increasing cost
+- no path that is more expensive than the true optimal path should ever be popped off the queue
+
+If the heuristic is consistent:
+- ~~The algorithm will only pop a path that ends at a particular vertex off the queue once~~
+- Consistency doesn't apply in the case of GCS*; there can be other paths popped off the queue that end at the same vertex
+
+**Note**: Definition of consistent heursitic:
+
+$$ h(\mathbf{v}) \leq g(\mathbf{v}') - g(\mathbf{v}) + h(\mathbf{v}') $$
+
+$\mathbf{v}'$ must be a successor of $\mathbf{v}$ in the *search tree*: i.e. $\mathbf{v}'$ contains $\mathbf{v}$ plus one successor vertex.
+
+Intuition:
+1. Re-arrange the equation: $h(v) + g(v) \leq h(v') + g(v')$: the estimated cost $f$ increases (weakly) as a the algorithm searches deeper and deeper into the search tree. This implies that the first time you pop a path to a vertex $v$ off the Q, that path has the optimal $g(v)$ and $f(v)$; you won't find a cheaper path by going deeper into the search tree.
+2. For A*, this implies optimal efficiency; once a path to a vertex $v$ is popped off the Q/"expanded", there's no need to ever "expand" another path to $v$ again. Each vertex only need be expanded once.
+
+
+
+
+<br /><hr /><br />
+
+
+## (GCS (Tobia's Thesis, Ch. 5):) [Graphs of Convex Sets with Applications to Optimal Control and Motion Planning](https://dspace.mit.edu/bitstream/handle/1721.1/156598/marcucci-tobiam-phd-eecs-2024-thesis.pdf?sequence=1&isAllowed=y) - 11/4/2024
 Background: general graph optimization problems
 
 <center><img src="ReadingNotesSupplements/GraphOptimizationFormulation.png" alt="" style="width:35%; margin-top: 10px"/></center><br />
@@ -43,7 +143,7 @@ GCS MINCP (Mixed Integer Non-Convex Program) Formulation
 
 GCS MICP Formulation
  - Idea: add convex constraints that "envelop"/are tight with the bilinear constraints. Then relax the non-convex bilinear constraints by simply dropping them.
- - The main challenge then is how to define these convex constraints that "envelop" the bilinear constraints.
+ - The main challenge then is how to define these convex constraints that "envelop" the bilinear constraints. We introduce "Lemma 5.1" (in Tobia's thesis):
     - Assume the MINCP has some constraint in the forms ($\mathcal{I}_v = $ set of edges incident to vtx $v$):
 
        $$ a y_v + \sum_{e \in \mathcal{I}_v} a_e y_e + b \geq 0 $$
@@ -54,7 +154,7 @@ GCS MICP Formulation
 
     - If we add convex constraints like this for every constraint (except the nonconvex bilinear constraints) in the MINCP, we envelop the bilinear constraints and can drop them while maximizing tightness of this relaxation.
 
- - Example: Say we have constraint: $0 \leq y_v \leq 1$. We can convert this to two convex constraints like so:
+ - Example: Say we have constraint: $0 \leq y_v \leq 1$. We can convert this to two convex constraints using "Lemma 5.1" like so:
    - $y_v \geq 0 \rightarrow (\mathcal{z}_v, y_v) \in \tilde{\mathcal{X}}_v \quad \forall v \in \mathcal{V}$
        - Explanation: $a=1$, $a_e=0$, $b=0$  
    - $1-y_e \geq 0 \rightarrow (\mathcal{x}_v - \mathcal{z}_v, 1 - y_v) \in \tilde{\mathcal{X}}_v \quad \forall v \in \mathcal{V}$
@@ -65,21 +165,32 @@ GCS MICP Formulation
 
  - Specifically, for the classic GCS problem, adding such convex constraints based on $0 \leq y_v \leq 1$ and $0 \leq y_e \leq 1$ yields a correct/tight relaxation:
 
+
+
 <center><img src="ReadingNotesSupplements/GCS_MICP_Formulation.png" alt="" style="width:85%; margin-top: 10px"/></center><br />
 
- - In general though, in the presence of other constraints in the GCS, this relaxation could be loose?
+
+
+<hr />
+
+GCS Applied to SPP (Shortest Path Problems)
+ - Starting from the MINCP formulation, we replace the general $y \in \mathcal{Y} \cap \{0,1\}^{\mathcal{V} \cup \mathcal{E}}$ constraint with a flow balance constraint (where $\delta_{ss}=1$ and $\delta_{tt}=1$) and a subtour-elimination constraint:
+
+
+<center><img src="ReadingNotesSupplements/GCS_SPP_MINCP_Formulation.png" alt="" style="width:65%; margin-top: 10px"/></center><br />
+
+
+- Note that the subtour elimination constraint are only necessary to the MICP if there are negative cycles in the graph; however, as we see later, when solving the LP convex relaxation of the MICP, this subtour elimination constraint can still be useful.
+
+ - Same as above, we reformulate this optimization as an MICP by introducing variable $z$ and applying "Lemma 5.1":
 
 
 
-<br /><hr /><br />
+<center><img src="ReadingNotesSupplements/GCS_SPP_MICP_Formulation.png" alt="" style="width:70%; margin-top: 10px"/></center><br />
 
-## (GCS:) [SHORTEST PATHS IN GRAPHS OF CONVEX SETS](https://arxiv.org/pdf/2101.11565) - 6/18/2024
-### Problem Defn.
-- $G := (V, \epsilon)$
-- $v \in V$
-- $X_v \subset \mathbb{R}^n$ - convex set for vertex $v$
-- $x_v$ - point within $X_v$
-- $e = (u,v) \in \epsilon$
+
+
+This can be solved to global optimality using classic MICP algorithms (i.e. branch and bound). However, this is typically further relaxed into a simple convex program by relaxing the $y \in \{0, 1\}$ constraints to $y \in [0,1]$ constraints. This relaxation is NOT tight -- the $y$ variables will usually end up being fractional. This is where the "rounding step" [[Motion Planning around Obstacles with Convex Optimization](https://arxiv.org/pdf/2205.04422), Section 4.2] comes into play. Because the flow balance constraints ensure that all $y_e$ exiting a node have values that sum to one, we can treat each $y_e$ as a probability. The "rounding step" essentially performs a random DFS traversal through the graph starting from the source node. Usually, multiple rounding steps are conducted, and the best result is the final path returned. (Sidenote: the random traversal may reach a dead end without reaching the target node; in this case, backtracking is done until a path is found.) After the best path is found and the $y$ variables are locked, $x_v$ are re-optimized (essentially solving the initial SSP MINCP but with the $y$ variables fixed).
 
 
 <br /><hr /><br />
